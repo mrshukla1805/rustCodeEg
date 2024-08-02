@@ -1,0 +1,34 @@
+rules:
+  - id: mysql-sqli
+    languages:
+      - rust
+    message: >
+      Detected string concatenation with a non-literal variable in an SQL statement. This could lead to SQL injection if the variable is user-controlled and not properly sanitized. In order to prevent SQL injection, use parameterized queries instead of string concatenation.
+    metadata:
+      owasp: 'A1: Injection'
+      references:
+        - https://pg.uptrace.dev/
+    severity: WARNING
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $CONN.query_first($QUERY)
+              - pattern-either:
+                  - pattern-inside: |
+                      $QUERY = $X + $Y;
+                      ...
+                  - pattern-inside: |
+                      $QUERY += $X;
+                      ...
+                  - pattern-inside: |
+                      $QUERY = format!($PARAM1, ...);
+                      ...
+          - pattern: $CONN.query_first($X + $Y)
+          - pattern: $CONN.query_first(format!("...", $PARAM1, ...))
+      - pattern-not-inside: |
+          $QUERY += "...";
+          ...
+      - pattern-not-inside: |
+          $QUERY = "..." + "...";
+          ...
